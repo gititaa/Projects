@@ -1,0 +1,302 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <script src="Scripts/jquery-3.3.1.min.js"></script>
+    <script src="Scripts/bootstrap.min.js"></script>
+    <link href="Content/bootstrap.min.css" rel="stylesheet" />
+    <title>Contacts</title>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-6">
+                <h2>Demo by Ambrish</h2>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6">
+                <table id="contactTable" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Edit</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6">
+                <button type="button" id="addContact" class="btn btn-primary" onclick="addClick();">Add Contact</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        Contact Information
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label for="firstname">First Name</label>
+                            <input type="text" id="firstname" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label for="lastname">Last Name</label>
+                            <input type="text" id="lastname" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="text" id="email" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="text" id="phone" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="panel-footer">
+                        <div class="row">
+                            <div class="col-xs-12">
+                                <button type="button" id="updateButton"
+                                        class="btn btn-primary"
+                                        onclick="updateClick();">
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <input type="hidden" id="contactid" value="0" />
+</body>
+<script>
+    var accessToken;
+    var Contact = {
+        Id: 0,
+        FirstName: "",
+        LastName: "",
+        Email: "",
+        PhoneNumber: "",
+        Status: 0
+    };
+
+    function updateClick() {
+        Contact = new Object();
+        Contact.Id = $("#contactid").val();
+        Contact.FirstName = $("#firstname").val();
+        Contact.LastName = $("#lastname").val();
+        Contact.Email = $("#email").val();
+        Contact.PhoneNumber = $("#phone").val();
+
+        if ($("#updateButton").text().trim() == "Add") {
+            addContact(Contact);
+        }
+        else {
+            updateContact(Contact);
+        }
+    }
+
+    function addClick() {
+        clearForm();
+        $("#updateButton").text("Add");
+    }
+
+    $(document).ready(function () {
+        accessToken = "bearer " + sessionStorage.getItem("tokenKey");
+        allContacts();
+    });
+
+    function addContact(contact) {
+        $.ajax({
+            url: "/api/Contact",
+            type: 'POST',
+            headers: { "Authorization": accessToken },
+            contentType:
+                "application/json;charset=utf-8",
+            data: JSON.stringify(contact),
+            success: function (contact) {
+                contactAddSuccess(contact);
+            },
+            error: function (request, message, error) {
+                handleException(request, message, error);
+            }
+        });
+    }
+
+    function updateContact(contact) {
+        $.ajax({
+            url: "/api/Contact/" + $("#contactid").val(),
+            type: 'PUT',
+            headers: { "Authorization": accessToken },
+            contentType:
+                "application/json;charset=utf-8",
+            data: JSON.stringify(contact),
+            
+            success: function (contact) {
+                contactUpdateSuccess(contact);
+            },
+            error: function (request, message, error) {
+                handleException(request, message, error);
+            }
+        });
+    }
+
+    function contactUpdateSuccess(contact) {
+        contactUpdateInTable(contact);
+    }
+
+    function contactUpdateInTable(contact) {
+        // Find Product in <table>
+        var row = $("#contactTable button[data-id='" +
+            contact.Id + "']").parents("tr")[0];
+        // Add changed product to table
+        $(row).after(buildContactTableRow(contact));
+        // Remove original product
+        $(row).remove();
+        clearForm(); // Clear form fields
+        // Change Update Button Text
+        $("#updateButton").text("Add");
+    }
+
+    function contactAddSuccess(contact) {
+        contactAddRow(contact);
+        clearForm();
+    }
+
+    function contactAddRow(contact) {
+        // Check if <tbody> tag exists, add one if not
+        if ($("#contactTable tbody").length == 0) {
+            $("#contactTable").append("<tbody></tbody>");
+        }
+        // Append row to <table>
+        $("#contactTable tbody").append(
+            buildContactTableRow(contact));
+    }
+
+    function clearForm() {
+        $("#firstname").val("");
+        $("#lastname").val("");
+        $("#phone").val("");
+        $("#email").val("");
+    }
+
+    function allContacts() {
+        $.ajax({
+            url: 'api/Contact',
+            type: 'GET',
+            headers: { "Authorization": accessToken },
+            dataType: 'JSON',
+            success: function (contacts) {
+                listContacts(contacts);
+            },
+            error: function (request, message, error) {
+                handleException(request, message, error);
+            }
+        });
+    }
+
+    function listContacts(contacts) {
+        $.each(contacts, function (index, contact) {
+            contactAddRow(contact);
+        });
+    }
+
+    function contactAddRow(contact) {
+        if ($('#contactTable tbody').length == 0) {
+            $('#contactTable').append("<tbody></tbody>");
+        }
+        $("#contactTable tbody").append(buildContactTableRow(contact));
+    }
+
+    function buildContactTableRow(contact) {
+        var row =
+            "<tr>" +
+            "<td>" + 
+            "<button type='button' onclick='getContact(this)' class='btn btn-default' data-id=" + contact.Id + ">" +
+            "<span class='glyphicon glyphicon-edit' </button> </td>" +
+            "<td>" + contact.FirstName + "</td>" +
+            "<td>" + contact.LastName + "</td>" +
+            "<td>" + contact.Email + "</td>" +
+            "<td>" + contact.PhoneNumber + "</td>" +
+            "<td>" + contact.Status + "</td>" +
+            "<td>" +
+            "<button type='button' onclick='deleteContact(this);' class='btn btn-default' data-id='" + contact.Id + "'>" +
+            "<span class='glyphicon glyphicon-remove' />" +
+            "</button>" +
+            "</td>" +
+            "</tr>";
+        return row;
+    }
+
+    function deleteContact(ctl) {
+        var id = $(ctl).data("id");
+
+        $.ajax({
+            url: "/api/Contact/" + id,
+            type: 'DELETE',
+            headers: { "Authorization": accessToken },
+            success: function (contact) {
+                $(ctl).parents("tr").remove();
+            },
+            error: function (request, message, error) {
+                handleException(request, message, error);
+            }
+        });
+    }
+
+    function handleException(request, message,
+        error) {
+        var msg = "";
+        msg += "Code: " + request.status + "\n";
+        msg += "Text: " + request.statusText + "\n";
+        if (request.responseJSON != null) {
+            msg += "Message" +
+                request.responseJSON.Message + "\n";
+        }
+        alert(msg);
+    }
+
+    function getContact(ctl) {
+        // Get product id from data- attribute
+        var id = $(ctl).data("id");
+
+        // Store product id in hidden field
+        $("#contactid").val(id);
+
+        // Call Web API to get a list of Products
+        $.ajax({
+            url: "/api/Contact/" + id,
+            type: 'GET',
+            dataType: 'json',
+            headers: { "Authorization": accessToken },
+            success: function (contact) {
+                editContact(contact);
+
+                // Change Update Button Text
+                $("#updateButton").text("Update");
+            },
+            error: function (request, message, error) {
+                handleException(request, message, error);
+            }
+        });
+    }
+
+    function editContact(contact) {
+        $("#firstname").val(contact.FirstName);
+        $("#lastname").val(contact.LastName);
+        $("#email").val(contact.Email);
+        $("#phone").val(contact.PhoneNumber);
+    }
+
+
+
+</script>
+</html>
